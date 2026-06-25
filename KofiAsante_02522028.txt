@@ -1,0 +1,178 @@
+MariaDB [project]> CREATE TABLE Employee (
+    ->     empNo VARCHAR(5) PRIMARY KEY,
+    ->     fName VARCHAR(20),
+    ->     lName VARCHAR(20),
+    ->     address VARCHAR(50),
+    ->     DOB DATE,
+    ->     sex CHAR(1) CHECK (sex IN ('M','F')),
+    ->     position VARCHAR(30) CHECK (
+    ->         position IN ('Manager','Team Leader','Analyst','Software Developer')
+    ->     ),
+    ->     deptNo VARCHAR(5)
+    -> );
+Query OK, 0 rows affected (0.015 sec)
+
+MariaDB [project]> INSERT INTO Employee VALUES
+    -> ('E1','Kofi','Mensah','Accra','1990-05-12','M','Manager','D1'),
+    -> ('E2','Ama','Boateng','Kumasi','1992-07-22','F','Manager','D2'),
+    -> ('E3','Yaw','Owusu','Cape Coast','1988-03-10','M','Analyst','D1'),
+    -> ('E4','Akosua','Asante','Takoradi','1995-09-18','F','Team Leader','D3'),
+    -> ('E5','Kwame','Appiah','Accra','1991-11-30','M','Software Developer','D2'),
+    -> ('E6','Efua','Antwi','Tamale','1993-01-25','F','Analyst','D3'),
+    -> ('E7','Kojo','Bediako','Sunyani','1989-06-14','M','Software Developer','D1'),
+    -> ('E8','Abena','Osei','Ho','1994-12-05','F','Manager','D3');
+Query OK, 8 rows affected (0.017 sec)
+Records: 8  Duplicates: 0  Warnings: 0
+
+--
+MariaDB [project]> CREATE VIEW FemaleManagerProjects AS
+    -> SELECT p.projNo, p.projName
+    -> FROM Project p
+    -> JOIN Department d ON p.deptNo = d.deptNo
+    -> JOIN Employee e ON d.mgrEmpNo = e.empNo
+    -> WHERE e.sex = 'F';
+Query OK, 0 rows affected (0.012 sec)
+
+MariaDB [project]> SELECT *
+    -> FROM FemaleManagerProjects
+    -> ORDER BY projNo;
++--------+------------------+
+| projNo | projName         |
++--------+------------------+
+| P2     | Inventory System |
+| P3     | Banking App      |
+| P4     | E-Commerce       |
++--------+------------------+
+
+
+ CREATE VIEW EmpProjectDetails AS
+    -> SELECT
+    ->     e.empNo,
+    ->     e.fName,
+    ->     e.lName,
+    ->     p.projName,
+    ->     w.hoursWorked
+    -> FROM Employee e
+    -> JOIN WorksOn w ON e.empNo = w.empNo
+    -> JOIN Project p ON p.projNo = w.projNo;
+Query OK, 0 rows affected (0.014 sec)
+
+MariaDB [project]> SELECT *
+    -> FROM EmpProjectDetails;
++-------+--------+---------+------------------+-------------+
+| empNo | fName  | lName   | projName         | hoursWorked |
++-------+--------+---------+------------------+-------------+
+| E1    | Kofi   | Mensah  | SCCS             |          20 |
+| E1    | Kofi   | Mensah  | Inventory System |          15 |
+| E2    | Ama    | Boateng | Inventory System |          25 |
+| E2    | Ama    | Boateng | Banking App      |          30 |
+| E3    | Yaw    | Owusu   | SCCS             |          10 |
+| E3    | Yaw    | Owusu   | Banking App      |          20 |
+| E4    | Akosua | Asante  | SCCS             |          10 |
+| E4    | Akosua | Asante  | E-Commerce       |          35 |
+| E5    | Kwame  | Appiah  | Inventory System |          40 |
+| E5    | Kwame  | Appiah  | Banking App      |          25 |
+| E6    | Efua   | Antwi   | Banking App      |          30 |
+| E6    | Efua   | Antwi   | E-Commerce       |          20 |
+| E7    | Kojo   | Bediako | SCCS             |          15 |
+| E8    | Abena  | Osei    | Inventory System |          10 |
+| E8    | Abena  | Osei    | E-Commerce       |          40 |
++-------+--------+---------+------------------+-------------+
+
+--
+MariaDB [project]> CREATE VIEW EmpProject(empNo, projNo, totalHours)
+    -> AS
+    -> SELECT w.empNo, w.projNo, SUM(hoursWorked)
+    -> FROM Employee e, Project p, WorksOn w
+    -> WHERE e.empNo = w.empNo AND p.projNo = w.projNo
+    -> GROUP BY w.empNo, w.projNo;
+Query OK, 0 rows affected (0.007 sec)
+
+MariaDB [project]> SELECT *
+    -> FROM EmpProject;
++-------+--------+------------+
+| empNo | projNo | totalHours |
++-------+--------+------------+
+| E1    | P1     |         20 |
+| E1    | P2     |         15 |
+| E2    | P2     |         25 |
+| E2    | P3     |         30 |
+| E3    | P1     |         10 |
+| E3    | P3     |         20 |
+| E4    | P1     |         10 |
+| E4    | P4     |         35 |
+| E5    | P2     |         40 |
+| E5    | P3     |         25 |
+| E6    | P3     |         30 |
+| E6    | P4     |         20 |
+| E7    | P1     |         15 |
+| E8    | P2     |         10 |
+| E8    | P4     |         40 |
++-------+--------+------------+
+
+--
+ SELECT projNo
+    -> FROM EmpProject
+    -> WHERE projNo = 'SCCS';
+Empty set (0.009 sec)
+
+ SELECT projNo
+    -> FROM EmpProject
+    -> WHERE projNo = 'P1';
++--------+
+| projNo |
++--------+
+| P1     |
+| P1     |
+| P1     |
+| P1     |
++--------+
+
+--
+SELECT COUNT(projNo)
+    -> FROM EmpProject
+    -> WHERE empNo = 'E1';
++---------------+
+| COUNT(projNo) |
++---------------+
+|             2 |
++---------------+
+
+--
+MariaDB [project]> SELECT empNo, totalHours
+    -> FROM EmpProject
+    -> GROUP BY empNo;
++-------+------------+
+| empNo | totalHours |
++-------+------------+
+| E1    |         20 |
+| E2    |         25 |
+| E3    |         10 |
+| E4    |         10 |
+| E5    |         40 |
+| E6    |         30 |
+| E7    |         15 |
+| E8    |         10 |
++-------+------------+
+
+--
+
+ SELECT empNo, SUM(totalHours) AS totalHours
+    -> FROM EmpProject
+    -> GROUP BY empNo;
++-------+------------+
+| empNo | totalHours |
++-------+------------+
+| E1    |         35 |
+| E2    |         55 |
+| E3    |         30 |
+| E4    |         45 |
+| E5    |         65 |
+| E6    |         50 |
+| E7    |         15 |
+| E8    |         50 |
++-------+------------+
+
+--
+7.28
+to maintain this as a maternalized view the maternalized view must be maintained by handling,insert,update operations to help manipulate and modify by adding and removing the partNo when and depending on if at least one row tuple satisifes the condition where partcost>1000. also the base table must be cheked to see if other qualifying rows exist. by maianting the number of qualifying rows per partNo, the view can be kept and maintained incrementally without using and accessing the base table
